@@ -1,0 +1,13 @@
+----------------------------------------------------------------
+Mon Oct 14 18:42:15 EEST 2013:
+Booting Derby version The Apache Software Foundation - Apache Derby - 10.10.1.1 - (1458268): instance a816c00e-0141-b7a1-c8d2-000000bc75c0 
+on database directory G:\Java Projects\NamingTool\namingtooldb with class loader sun.misc.Launcher$AppClassLoader@4b222f 
+Loaded from file:/G:/Java%20Projects/NamingTool/lib/derby.jar
+java.vendor=Oracle Corporation
+java.runtime.version=1.7.0_05-b05
+user.dir=G:\Java Projects\NamingTool
+os.name=Windows XP
+os.arch=x86
+os.version=5.1
+derby.system.home=null
+Database Class Loader started - derby.database.classpath=''
