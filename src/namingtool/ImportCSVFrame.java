@@ -94,7 +94,7 @@ public class ImportCSVFrame extends javax.swing.JFrame {
     }
     
     private int findNode(String node, int parent_id) throws SQLException{
-        String query = "SELECT ID FROM MAIN WHERE NAME = '" + node + "' AND PARENT_ID = " + parent_id; // search
+        String query = "SELECT ID FROM MAIN WHERE NAME = '" + node + "' AND PARENT_ID = " + parent_id;
         ResultSet rs = database.sendQuery(query);    
         logger(query);
         if (null != rs && rs.next()){            
@@ -104,57 +104,60 @@ public class ImportCSVFrame extends javax.swing.JFrame {
         }
     }
     
+    private void insertNode(String name, String toc, String notes, int parent_id){
+        String query = "INSERT INTO MAIN (NAME, TOC, NOTES, PARENT_ID) VALUES ('" + name + "', '" + toc + "', '" + notes + "', " + parent_id + ")";
+        database.executeQuery(query);
+    }
+    
     
        
-    private void read(){ // TODO split this! It's work fine
-        String csvFile = "G:/Dropbox/Naming Tool/Investigator_convert.csv"; //TODO
+    private void read(String csvFile){ // TODO split this! It's work fine        
+        final int ROOT = 0;        
+        final int folderIndex = 1; // in String[]
+        final int topLevelIndex = 2; // in String[]        
+        
         BufferedReader br = null;
         String line = "";
         String cvsSplitBy = ";";
+        
         database = DBTools.getInstance();
         String query = "";
-        final int ROOT = 0;
-        
+
         try {            
-            br = new BufferedReader(new FileReader(csvFile));            
-            int limit = 0;
-            while ((line = br.readLine()) != null && limit++ < 10){
-                String[] tree = line.split(cvsSplitBy);                      
+            br = new BufferedReader(new FileReader(csvFile));                        
+            while ((line = br.readLine()) != null){
+                String[] tree = line.split(cvsSplitBy);        
                 
-                final int folderIndex = 1;
+                // first of all - identify a root folder
                 String toc = tree[folderIndex].substring(0, tree[folderIndex].indexOf(" "));
                 String name = tree[folderIndex].trim().substring(tree[folderIndex].indexOf(" ") + 1).replaceAll("'", "''"); // Folder name
                 int parent_id = ROOT;
                 int node_id = findNode(name, parent_id);
                 
-                final int topLevelIndex = 2;
+                // construct a branch
                 for (int i = topLevelIndex; i < tree.length - 1; i++){
                     int offset = (i - 2) * 3;
                     toc = tree[i].substring(offset, offset + 2);                    
                     name = tree[i].trim().substring(tree[i].indexOf(" ") + 1).replaceAll("'", "''");
-                    
                     parent_id = node_id;
                     node_id = findNode(name, parent_id);
-                    if (0 == node_id){                    
-                        query = "INSERT INTO MAIN (NAME, TOC, PARENT_ID) VALUES ('" + name + "', '" + toc + "', " + parent_id + ")";
-                        database.executeQuery(query);
-                        node_id = findNode(name, parent_id);
+                    if (0 == node_id){ // if a node doesn't exist - create his
+                        insertNode(name, toc, " ", parent_id);
+                        node_id = findNode(name, parent_id); // maybe exist some other way to find new ID
                     }                    
-                }    
+                }                    
                 
+                // now find the final node - the file
                 parent_id = node_id;
                 toc = "file";
                 name = tree[tree.length - 1].trim().replaceAll("'", "''");                
                 String notes = tree[0].trim().replaceAll("'", "''");                                 
-                query = "INSERT INTO MAIN (NAME, TOC, NOTES, PARENT_ID) VALUES ('" + name + "', '" + toc + "', '" + notes + "', " + parent_id + ")";
-                database.executeQuery(query);                
+                insertNode(name, toc, notes, parent_id);
             }            
         } catch (FileNotFoundException ex){
             logger(ex.toString());
-        } catch (IOException ex){
+        } catch (IOException | SQLException ex){
             logger(ex.toString());            
-        } catch (SQLException ex){
-            logger(ex.toString());
         } finally {
             if (br != null){
                 try {
@@ -168,8 +171,9 @@ public class ImportCSVFrame extends javax.swing.JFrame {
     
     private void jFileChooser1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jFileChooser1ActionPerformed
         if ("ApproveSelection".equals(evt.getActionCommand())){
-            logger(jFileChooser1.getSelectedFile().getName()); 
-            read(); // put a file name here.
+            String fileName = jFileChooser1.getSelectedFile().getAbsolutePath();            
+            logger("opened file " + fileName);            
+            read(fileName); 
         } else if ("CancelSelection".equals(evt.getActionCommand())){
             this.setVisible(false);
         }

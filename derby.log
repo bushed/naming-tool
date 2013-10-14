@@ -1,13 +1,13 @@
 ----------------------------------------------------------------
-Mon Oct 14 18:42:15 EEST 2013:
-Booting Derby version The Apache Software Foundation - Apache Derby - 10.10.1.1 - (1458268): instance a816c00e-0141-b7a1-c8d2-000000bc75c0 
-on database directory G:\Java Projects\NamingTool\namingtooldb with class loader sun.misc.Launcher$AppClassLoader@4b222f 
-Loaded from file:/G:/Java%20Projects/NamingTool/lib/derby.jar
+Mon Oct 14 23:09:32 EEST 2013:
+Booting Derby version The Apache Software Foundation - Apache Derby - 10.10.1.1 - (1458268): instance a816c00e-0141-b896-7fbe-000006cdfbf0 
+on database directory E:\Java Projects\naming-tool\namingtooldb with class loader sun.misc.Launcher$AppClassLoader@4cf2f585 
+Loaded from file:/E:/Java%20Projects/naming-tool/lib/derby.jar
 java.vendor=Oracle Corporation
-java.runtime.version=1.7.0_05-b05
-user.dir=G:\Java Projects\NamingTool
-os.name=Windows XP
-os.arch=x86
-os.version=5.1
+java.runtime.version=1.7.0_40-b43
+user.dir=E:\Java Projects\naming-tool
+os.name=Windows 7
+os.arch=amd64
+os.version=6.1
 derby.system.home=null
 Database Class Loader started - derby.database.classpath=''
