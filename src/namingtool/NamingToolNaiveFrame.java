@@ -8,10 +8,7 @@ import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.logging.*;
 import javax.swing.ComboBoxModel;
 import javax.swing.DefaultListModel;
@@ -51,7 +48,8 @@ public class NamingToolNaiveFrame extends javax.swing.JFrame {
     ManualDB manualDB = new ManualDB();
     ImportCSVFrame importCSV = new ImportCSVFrame();
     
-    private ArrayList<ListOfNodes> reg;
+    private List<ListOfNodes> reg;
+    private List<Integer> path;
 
     /**
      * Creates new form NamingToolNaiveFrame
@@ -82,6 +80,7 @@ public class NamingToolNaiveFrame extends javax.swing.JFrame {
     
     public NamingToolNaiveFrame() {        
         this.reg = new ArrayList<ListOfNodes>();
+        path = new ArrayList<Integer>();
         initLogger();        
         r = new ResultList();
         initComponents();        
@@ -93,11 +92,28 @@ public class NamingToolNaiveFrame extends javax.swing.JFrame {
         fillCoreLevel();
     }
 
+
+    private void getFiles(int parent_id){        
+        try {            
+            database = DBTools.getInstance();
+            String query = "SELECT NAME, NOTES FROM MAIN WHERE PARENT_ID = " + parent_id + " AND TOC = 'file' ORDER BY ID"; // TODO flexible
+            ResultSet rs = database.sendQuery(query);
+            while (rs.next()) {                
+                r.addFile(new FileTemplate(rs.getString("NAME"), rs.getString("NOTES")));
+            }            
+        } catch (SQLException ex) {
+            logger.log(Level.SEVERE, null, ex);
+        } finally {
+            database.disconnect();
+            this.jTable1.updateUI();
+        }
+    }
+    
     private List<Node> getChildren(int level, int parent_id){
         List result = new ArrayList<Node>();
         try {            
             database = DBTools.getInstance();
-            String query = "SELECT TOC, NAME, ID FROM MAIN WHERE PARENT_ID = " + parent_id + " ORDER BY ID"; // TODO flexible
+            String query = "SELECT TOC, NAME, ID FROM MAIN WHERE PARENT_ID = " + parent_id + " AND TOC <> 'file' ORDER BY ID"; // TODO flexible
             ResultSet rs = database.sendQuery(query);
             while (rs.next()) {                
                 result.add(new Node(rs.getString("NAME"), rs.getString("TOC"), rs.getInt("ID")));
@@ -107,20 +123,32 @@ public class NamingToolNaiveFrame extends javax.swing.JFrame {
         } finally {
             database.disconnect();
         }      
-        System.out.println(reg.size() + " <- " + level);
-        if (reg.size() <= level){            
-            reg.add(new ListOfNodes(result));                        
-        } else {
-            reg.set(level, new ListOfNodes(result));
-        }
+
+//        if (reg.size() <= level){            
+//            reg.add(new ListOfNodes(result));                        
+//        } else {
+//            reg.set(level, new ListOfNodes(result));
+//        }
+        set(reg, level, new ListOfNodes(result));
 
         return result;
     }
     
     private int getParentId(int book, int page){
-        List<Node> regPage = reg.get(book).nodes;        
+        List<Node> regPage = reg.get(book - 1).nodes;        
         int parent_id = regPage.get(page).id;        
         return parent_id;
+        
+    }
+    
+    private void printReg (){
+        for (ListOfNodes l : reg){
+            for (Iterator it = l.nodes.iterator(); it.hasNext();) {
+                Node n = (Node) it.next();
+                System.out.print(" id: " + n.id + " name: " + n.name);
+            }
+            System.out.println();
+        }
     }
     
     /**
@@ -155,6 +183,12 @@ public class NamingToolNaiveFrame extends javax.swing.JFrame {
         setResizable(false);
 
         jPanel1.setBorder(javax.swing.BorderFactory.createEtchedBorder());
+
+        jComboBox2.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jComboBox2ActionPerformed(evt);
+            }
+        });
 
         jComboBox1.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -304,16 +338,26 @@ public class NamingToolNaiveFrame extends javax.swing.JFrame {
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
         manualDB.setVisible(true);
     }//GEN-LAST:event_jButton1ActionPerformed
-
+    
+    private void set(List list, int level, Object value){
+        if (list.size() <= level){            
+            list.add(value);                        
+        } else {
+            list.set(level, value);
+        }
+    }
+    
     private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
         importCSV.setVisible(true);
     }//GEN-LAST:event_jButton2ActionPerformed
 
     private void coreLevelValueChanged(javax.swing.event.ListSelectionEvent evt) {//GEN-FIRST:event_coreLevelValueChanged
-        if (!evt.getValueIsAdjusting()){
-            int level = 0; // TODO SOmething wrong 
-            jComboBox1.removeAllItems();                        
-            List<Node> children = getChildren(level, getParentId(level, coreLevel.getSelectedIndex()));            
+        if (!evt.getValueIsAdjusting()){            
+            int level = 1;             
+            jComboBox1.removeAllItems();       
+            int selected = coreLevel.getSelectedIndex();                        
+            set(path, 0, selected + 1);
+            List<Node> children = getChildren(level, getParentId(level, selected));            
             for (Node child : children) {
                 String visibleName = child.toc + " " + child.name;
                 jComboBox1.addItem(visibleName);
@@ -328,14 +372,43 @@ public class NamingToolNaiveFrame extends javax.swing.JFrame {
     }//GEN-LAST:event_jCheckBox1ActionPerformed
 
     private void jComboBox1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jComboBox1ActionPerformed
-        int level = 1;
-        jComboBox2.removeAllItems();                        
-        List<Node> children = getChildren(level, getParentId(level, jComboBox1.getSelectedIndex()));
-        for (Node child : children) {
-            String visibleName = child.toc + " " + child.name;
-            jComboBox2.addItem(visibleName);
-        }        
+        if (jComboBox1.getItemCount() > 0){
+            int level = 2;
+            jComboBox2.removeAllItems();    
+            int selected = jComboBox1.getSelectedIndex();                                 
+            int parent_id = getParentId(level, selected);
+            set(path, level - 1, parent_id);
+            List<Node> children = getChildren(level, parent_id);
+            for (Node child : children) {
+                String visibleName = child.toc + " " + child.name;
+                jComboBox2.addItem(visibleName);
+            }        
+            flushResultList();
+        }
     }//GEN-LAST:event_jComboBox1ActionPerformed
+
+    private void flushResultList(){
+        r.clear();        
+        for (int id : path){
+            getFiles(id);            
+        }
+    }
+    
+    private void jComboBox2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jComboBox2ActionPerformed
+        if (jComboBox2.getItemCount() > 0){ // 0
+            int level = 3; // 1
+            jComboBox3.removeAllItems();     // 2
+            int selected = jComboBox2.getSelectedIndex();  // 3            
+            int parent_id = getParentId(level, selected); // херня
+            set(path, level - 1, parent_id);
+            List<Node> children = getChildren(level, parent_id);
+            for (Node child : children) {
+                String visibleName = child.toc + " " + child.name;
+                jComboBox3.addItem(visibleName); // 4
+            }        
+            flushResultList();
+        }
+    }//GEN-LAST:event_jComboBox2ActionPerformed
 
     /**
      * @param args the command line arguments
