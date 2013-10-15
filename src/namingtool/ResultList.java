@@ -14,9 +14,6 @@ public class ResultList {
     
     public ResultList(){
         list = new ArrayList<FileTemplate>();
-        list.add(new FileTemplate("YYYYMMDD_document_version", "Date = expiration"));
-        list.add(new FileTemplate("Subject_report", ""));
-        list.add(new FileTemplate("Protocol#_name", ""));
     }
           
     public int getSize(){
@@ -29,5 +26,13 @@ public class ResultList {
     
     public String getNotes(int i){
         return list.get(i).getNotes();
+    }
+    
+    public void addFile(FileTemplate f){
+        list.add(f);
+    }
+    
+    public void clear(){
+        list.clear();
     }
 }
